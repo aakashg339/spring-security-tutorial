@@ -9,11 +9,14 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -21,6 +24,10 @@ import org.springframework.context.annotation.Configuration;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    @Autowired
+    private DataSource dataSource;
+
     @Bean
     SecurityFilterChain defauSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((requests) -> 
@@ -47,7 +54,13 @@ public class SecurityConfig {
             .password("{noop}adminpass")
             .roles("ADMIN")
             .build();
+
+        JdbcUserDetailsManager userDetailsManager = new JdbcUserDetailsManager(dataSource);
         
-        return new InMemoryUserDetailsManager(user1, admin);
+        userDetailsManager.createUser(user1);
+        userDetailsManager.createUser(admin);
+        
+        return userDetailsManager;
+        // return new InMemoryUserDetailsManager(user1, admin);
     }
 }
