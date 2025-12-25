@@ -35,7 +35,7 @@ public class JwtUtils {
         logger.debug("Authorization Header: {}", bearerToken);
         
         if(bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(bearerToken.indexOf(' '));
+            return bearerToken.substring(bearerToken.indexOf(' ') + 1);
         }
         return null;
     }
