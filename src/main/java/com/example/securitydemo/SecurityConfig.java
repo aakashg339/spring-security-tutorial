@@ -1,5 +1,7 @@
 package com.example.securitydemo;
 
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -13,6 +15,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.example.securitydemo.jwt.AuthEntryPointJwt;
+import com.example.securitydemo.jwt.AuthTokenFilter;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -30,18 +36,36 @@ public class SecurityConfig {
     @Autowired
     private DataSource dataSource;
 
+    @Autowired
+    private AuthEntryPointJwt unauthorisedHandler;
+
+    @Bean
+    public AuthTokenFilter authenticatioTokenFilter() {
+        return new AuthTokenFilter();
+    }
+
     @Bean
     SecurityFilterChain defauSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests((requests) -> 
-            requests.requestMatchers("/h2-console/**").permitAll()
+        http.authorizeHttpRequests((authorizeRequests) -> 
+            authorizeRequests.requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/signin").permitAll()
                 .anyRequest().authenticated());
         http.sessionManagement(session
             -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         //http.formLogin(withDefaults());
-        http.httpBasic(withDefaults());
+        // http.httpBasic(withDefaults());
+
+        http.exceptionHandling(exceptiion ->
+            exceptiion.authenticationEntryPoint(unauthorisedHandler)
+        );
+
         http.headers(headers -> 
             headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin));
         http.csrf(AbstractHttpConfigurer::disable);
+
+        http.addFilterBefore(authenticatioTokenFilter(), 
+            UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
@@ -69,5 +93,10 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration builder) {
+        return builder.getAuthenticationManager();
     }
 }
